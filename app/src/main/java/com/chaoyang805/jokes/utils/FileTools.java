@@ -1,10 +1,8 @@
 package com.chaoyang805.jokes.utils;
 
 import android.content.Context;
-import android.util.Log;
 
-import com.chaoyang805.jokes.Config;
-import com.chaoyang805.jokes.bean.Joke;
+import com.chaoyang805.jokes.model.Joke;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -25,7 +23,6 @@ import java.util.List;
  */
 public class FileTools {
 
-    private static final String TAG = "FileTools";
 
     /**
      * 将笑话离线缓存到本地
@@ -34,7 +31,7 @@ public class FileTools {
     public static void cacheJokes(Context context,String content){
 
         try {
-            FileOutputStream fos = context.openFileOutput(Config.OFFLINE_FILENAME, Context.MODE_PRIVATE);
+            FileOutputStream fos = context.openFileOutput(Constant.OFFLINE_FILENAME, Context.MODE_PRIVATE);
             OutputStreamWriter osw = new OutputStreamWriter(fos, "UTF-8");
             osw.write(content);
             osw.flush();
@@ -50,12 +47,16 @@ public class FileTools {
         }
     }
 
+    /**
+     * 从手机内存读取离线的数据
+     * @param context
+     * @return
+     */
     public static String readCachedJokes(Context context) {
         String result;
         try {
-            FileInputStream fis = context.openFileInput(Config.OFFLINE_FILENAME);
+            FileInputStream fis = context.openFileInput(Constant.OFFLINE_FILENAME);
             InputStreamReader isr = new InputStreamReader(fis, "UTF-8");
-            Log.d(TAG, "file.length = " + fis.available());
             char[] buffer = new char[fis.available()];
             isr.read(buffer);
             isr.close();
@@ -64,13 +65,13 @@ public class FileTools {
             return result;
             //出现异常说明缓存数据获取失败，将result赋值为失败的代码进行返回
         } catch (FileNotFoundException e) {
-            result = String.valueOf(Config.RESULT_CODE_FAIL);
+            result = String.valueOf(Constant.RESULT_CODE_FAIL);
             e.printStackTrace();
         } catch (UnsupportedEncodingException e) {
-            result = String.valueOf(Config.RESULT_CODE_FAIL);
+            result = String.valueOf(Constant.RESULT_CODE_FAIL);
             e.printStackTrace();
         } catch (IOException e) {
-            result = String.valueOf(Config.RESULT_CODE_FAIL);
+            result = String.valueOf(Constant.RESULT_CODE_FAIL);
             e.printStackTrace();
         }
         return result;
@@ -85,12 +86,14 @@ public class FileTools {
         try {
             //去掉结果中的html标签
             result = result.replaceAll("\\<.*?>", "");
+            //解析json字符串
             JSONObject jsonObject = new JSONObject(result);
             JSONArray jsonArr = jsonObject.getJSONArray("result");
             JSONObject jsonItem;
             Joke joke;
             List<Joke> jokes = new ArrayList<>();
             for (int i = 0; i < jsonArr.length(); i++) {
+                //将json对象封装成joke对象，添加到List中
                 jsonItem = jsonArr.getJSONObject(i);
                 joke = new Joke(jsonItem.getInt("ID"), jsonItem.getString("title"),
                         jsonItem.getString("content"), jsonItem.getInt("comment_count"),

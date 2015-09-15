@@ -4,9 +4,8 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
-import android.util.Log;
 
-import com.chaoyang805.jokes.Config;
+import com.chaoyang805.jokes.utils.Constant;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -23,7 +22,14 @@ import java.net.URL;
 public class BaseConnection {
 
     private static final String TAG = "BaseConnection";
-
+    /**
+     * 网络请求的地址
+     */
+    private String mUrl;
+    /**
+     * 异步任务对象
+     */
+    private AsyncTask<String, Void, String> mTask;
     /**
      * 构造方法里开启一个线程来执行网络操作
      *
@@ -31,42 +37,50 @@ public class BaseConnection {
      * @param paramsName   网址中的参数名称
      * @param paramsValues 网址中的参数值下标和paramsName一一对应
      */
-    public BaseConnection(final String urlStr, String[] paramsName, String[] paramsValues, final CallBack callBack) {
-        final StringBuffer urlBuffer = new StringBuffer(urlStr + "?");
+    public BaseConnection(String urlStr, String[] paramsName, String[] paramsValues, final CallBack callBack) {
+        //将原始的网址和请求参数拼接起来
+        StringBuffer urlBuffer = new StringBuffer(urlStr + "?");
         for (int i = 0; i < paramsName.length; i++) {
             urlBuffer.append(paramsName[i] + "=" + paramsValues[i]);
             if (i != paramsName.length - 1) {
                 urlBuffer.append("&");
             }
         }
-        new AsyncTask<Void, Void, String>() {
+        mUrl = urlBuffer.toString();
+        mTask = new AsyncTask<String, Void, String>() {
 
             @Override
-            protected String doInBackground(Void... params) {
+            protected String doInBackground(String... urlParams) {
                 try {
-                    URL url = new URL(urlBuffer.toString());
+                    URL url = new URL(urlParams[0].toString());
                     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    //设置超时时长为10s
                     connection.setConnectTimeout(10000);
-                    InputStream inputStream = connection.getInputStream();
-                    InputStreamReader isr = new InputStreamReader(inputStream, "UTF-8");
+                    //从连接中获得输入流
+                    InputStream in = connection.getInputStream();
+                    //将输入流包装
+                    InputStreamReader isr = new InputStreamReader(in, "UTF-8");
                     BufferedReader bfr = new BufferedReader(isr);
                     String line;
                     StringBuffer sb = new StringBuffer();
+                    //一行一行地读取
                     while ((line = bfr.readLine()) != null) {
                         sb.append(line);
                     }
+                    //关闭输入流
                     bfr.close();
                     isr.close();
-                    inputStream.close();
+                    in.close();
                     return  sb.toString();
+                    //出现异常说明请求失败
                 } catch (MalformedURLException e) {
                     if (callBack != null) {
-                        callBack.onFinished(Config.RESULT_CODE_FAIL, null);
+                        callBack.onFinished(Constant.RESULT_CODE_FAIL, null);
                     }
                     e.printStackTrace();
                 } catch (IOException e) {
                     if (callBack != null) {
-                        callBack.onFinished(Config.RESULT_CODE_FAIL, null);
+                        callBack.onFinished(Constant.RESULT_CODE_FAIL, null);
                     }
                     e.printStackTrace();
                 }
@@ -76,11 +90,19 @@ public class BaseConnection {
             @Override
             protected void onPostExecute(String result) {
                 super.onPostExecute(result);
+                //网络请求完成后执行回调方法
                 if (callBack != null) {
-                    callBack.onFinished(Config.RESULT_CODE_SUCCESS, result);
+                    callBack.onFinished(Constant.RESULT_CODE_SUCCESS, result);
                 }
             }
-        }.execute();
+        };
+    }
+
+    /**
+     * 开始进行网络连接
+     */
+    public void connect(){
+        mTask.execute(mUrl);
     }
 
     /**

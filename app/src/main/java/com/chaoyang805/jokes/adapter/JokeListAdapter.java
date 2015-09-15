@@ -8,7 +8,7 @@ import android.widget.BaseAdapter;
 import android.widget.TextView;
 
 import com.chaoyang805.jokes.R;
-import com.chaoyang805.jokes.bean.Joke;
+import com.chaoyang805.jokes.model.Joke;
 
 import java.util.List;
 

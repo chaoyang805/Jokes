@@ -1,4 +1,4 @@
-package com.chaoyang805.jokes.bean;
+package com.chaoyang805.jokes.model;
 
 import java.io.Serializable;
 
