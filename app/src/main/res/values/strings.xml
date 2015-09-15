@@ -12,4 +12,8 @@
     <string name="failed_to_get_offline_data">获取缓存数据失败</string>
     <string name="no_internet_loading_offline_data">无网络连接，加载离线数据</string>
     <string name="internet_is_unavailable">无网络连接，加载离线数据</string>
+    <string name="try_pull_down_to_refresh">没有数据,下拉刷新试试</string>
+    <string name="pull_up_to_load_more">上拉加载下一页</string>
+    <string name="no_more_jokes">没有更多了</string>
+    <string name="internet_unavailable_cant_load_more">网络不可用,无法加载更多</string>
 </resources>

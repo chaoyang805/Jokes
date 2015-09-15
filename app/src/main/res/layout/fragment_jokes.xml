@@ -1,15 +1,27 @@
-<android.support.v4.widget.SwipeRefreshLayout android:id="@+id/refresh_layout"
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:layout_height="match_parent">
 
-    <ListView
-        android:scrollbars="none"
-        android:id="@+id/joke_list"
+    <android.support.v4.widget.SwipeRefreshLayout
+        android:id="@+id/refresh_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.chaoyang805.jokes.view.PullUpLoadMoreListView
+            android:id="@+id/joke_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="none"
+            ></com.chaoyang805.jokes.view.PullUpLoadMoreListView>
+
+    </android.support.v4.widget.SwipeRefreshLayout>
+
+    <TextView
+        android:id="@+id/tv_hint"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        ></ListView>
+        android:gravity="center"
+        android:text="@string/try_pull_down_to_refresh"/>
+</FrameLayout>
 
-</android.support.v4.widget.SwipeRefreshLayout>

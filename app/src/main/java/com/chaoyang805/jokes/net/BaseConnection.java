@@ -30,6 +30,7 @@ public class BaseConnection {
      * 异步任务对象
      */
     private AsyncTask<String, Void, String> mTask;
+
     /**
      * 构造方法里开启一个线程来执行网络操作
      *
@@ -71,19 +72,13 @@ public class BaseConnection {
                     bfr.close();
                     isr.close();
                     in.close();
-                    return  sb.toString();
-                    //出现异常说明请求失败
+                    return sb.toString();
                 } catch (MalformedURLException e) {
-                    if (callBack != null) {
-                        callBack.onFinished(Constant.RESULT_CODE_FAIL, null);
-                    }
                     e.printStackTrace();
                 } catch (IOException e) {
-                    if (callBack != null) {
-                        callBack.onFinished(Constant.RESULT_CODE_FAIL, null);
-                    }
                     e.printStackTrace();
                 }
+                //返回为null,说明出现异常
                 return null;
             }
 
@@ -93,6 +88,8 @@ public class BaseConnection {
                 //网络请求完成后执行回调方法
                 if (callBack != null) {
                     callBack.onFinished(Constant.RESULT_CODE_SUCCESS, result);
+                } else {
+                    callBack.onFinished(Constant.RESULT_CODE_FAIL, result);
                 }
             }
         };
@@ -101,7 +98,7 @@ public class BaseConnection {
     /**
      * 开始进行网络连接
      */
-    public void connect(){
+    public void connect() {
         mTask.execute(mUrl);
     }
 

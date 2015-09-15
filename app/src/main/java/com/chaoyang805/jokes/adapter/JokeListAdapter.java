@@ -40,6 +40,11 @@ public class JokeListAdapter extends BaseAdapter {
         notifyDataSetChanged();
     }
 
+    public void addAll(List<Joke> jokes) {
+        mJokes.addAll(jokes);
+        notifyDataSetChanged();
+    }
+
     @Override
     public int getCount() {
 

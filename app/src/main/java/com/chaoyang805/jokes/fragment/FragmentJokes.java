@@ -9,17 +9,18 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import com.chaoyang805.jokes.utils.Constant;
 import com.chaoyang805.jokes.R;
 import com.chaoyang805.jokes.adapter.JokeListAdapter;
 import com.chaoyang805.jokes.model.Joke;
 import com.chaoyang805.jokes.net.BaseConnection;
 import com.chaoyang805.jokes.net.GetJokes;
+import com.chaoyang805.jokes.utils.Constant;
 import com.chaoyang805.jokes.utils.FileTools;
 import com.chaoyang805.jokes.utils.ToastUtils;
+import com.chaoyang805.jokes.view.PullUpLoadMoreListView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +28,8 @@ import java.util.List;
 /**
  * Created by chaoyang805 on 2015/9/13.
  */
-public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefreshListener, AdapterView.OnItemClickListener {
+public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefreshListener,
+        AdapterView.OnItemClickListener, PullUpLoadMoreListView.OnLoadMoreListener {
     /**
      * 下拉刷新控件
      */
@@ -39,7 +41,23 @@ public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefr
     /**
      * listview 控件
      */
-    private ListView mListView;
+    private PullUpLoadMoreListView mListView;
+    /**
+     * 提示用户下拉刷新的textview
+     */
+    private TextView mTvHint;
+    /**
+     * 获取新笑话数据的对象
+     */
+    private GetJokes mNewJokes;
+    /**
+     * 当前显示的页数
+     */
+    private int mCurrentPage = 1;
+    /**
+     * 每页加载的数据数量
+     */
+    private int mPerPageItemCount = 10;
 
     /**
      * list的item被点击到时的回调
@@ -58,16 +76,27 @@ public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefr
     private GetJokes.CallBack mJokesCallback = new GetJokes.CallBack() {
         @Override
         public void onFinished(int resultCode, String result) {
+
+            if (mCurrentPage > 1) {
+                mListView.loadComplete();
+            }
             if (resultCode == Constant.RESULT_CODE_SUCCESS) {
                 if (TextUtils.isEmpty(result)) {
-                    ToastUtils.showToast(getActivity(), R.string.loading_failed, Toast.LENGTH_SHORT);
+                    ToastUtils.showToast(getActivity(), R.string.no_more_jokes, Toast.LENGTH_SHORT);
                 } else {
-                    //每次获取到数据后，将数据离线到本地
-                    FileTools.cacheJokes(getActivity(), result);
                     //将json格式的数据解析成joke对象，加载到listView中
                     List<Joke> jokes = FileTools.parseJokeResult(result);
-                    mAdapter.refreshList(jokes);
-                    ToastUtils.showToast(getActivity(), R.string.loading_complete, Toast.LENGTH_SHORT);
+                    //如果获得的数据数量小于10就不再开启加载更多的功能
+                    mListView.setCanLoadMore(jokes.size() >= mPerPageItemCount);
+                    if (mCurrentPage == 1) {
+                        //只缓存第一页的数据到本地
+                        FileTools.cacheJokes(getActivity(), result);
+                        mAdapter.refreshList(jokes);
+                        ToastUtils.showToast(getActivity(), R.string.loading_complete, Toast.LENGTH_SHORT);
+                    } else {
+                        mAdapter.addAll(jokes);
+                        ToastUtils.showToast(getActivity(), String.format("加载第%d页", mCurrentPage), Toast.LENGTH_SHORT);
+                    }
                 }
             } else if (resultCode == Constant.RESULT_CODE_FAIL) {
                 ToastUtils.showToast(getActivity(), R.string.loading_failed, Toast.LENGTH_SHORT);
@@ -109,11 +138,30 @@ public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefr
         //获取缓存数据失败后，不进行任何操作
         if (cachedJokes.equals(String.valueOf(Constant.RESULT_CODE_FAIL))) {
             ToastUtils.showToast(getActivity(), R.string.failed_to_get_offline_data, Toast.LENGTH_SHORT);
+            if (mJokes.size() <= 0) {
+                shouldShowHint();
+            }
         } else {
             List<Joke> jokes = FileTools.parseJokeResult(cachedJokes);
             //获得本地数据成功后刷新listView的数据
             mAdapter.refreshList(jokes);
+            //如果获得的数据数量小于10就不再开启加载更多的功能
+            mListView.setCanLoadMore(jokes.size() >= mPerPageItemCount);
+            shouldShowHint();
             ToastUtils.showToast(getActivity(), R.string.no_internet_loading_offline_data, Toast.LENGTH_SHORT);
+        }
+    }
+
+    /**
+     * 根据mJokes是否为0来判断是否显示下拉刷新的提示
+     */
+    private void shouldShowHint() {
+        if (mJokes.size() > 0) {
+            mListView.setVisibility(View.VISIBLE);
+            mTvHint.setVisibility(View.GONE);
+        } else {
+            mListView.setVisibility(View.GONE);
+            mTvHint.setVisibility(View.VISIBLE);
         }
     }
 
@@ -123,13 +171,15 @@ public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefr
      * @param rootView
      */
     private void initViews(View rootView) {
-
         //初始化listView
         mJokes = new ArrayList<>();
         mAdapter = new JokeListAdapter(getActivity(), mJokes);
-        mListView = (ListView) rootView.findViewById(R.id.joke_list);
+        mListView = (PullUpLoadMoreListView) rootView.findViewById(R.id.joke_list);
         mListView.setAdapter(mAdapter);
         mListView.setOnItemClickListener(this);
+        mListView.setOnLoadMoreListener(this);
+        mTvHint = (TextView) rootView.findViewById(R.id.tv_hint);
+        mTvHint.setVisibility(View.GONE);
         //初始化下拉刷新控件
         mRefreshLayout = (SwipeRefreshLayout) rootView.findViewById(R.id.refresh_layout);
         mRefreshLayout.setOnRefreshListener(this);
@@ -143,19 +193,37 @@ public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefr
      */
     @Override
     public void onRefresh() {
+        //下拉刷新默认回到第一页
+        mCurrentPage = 1;
         if (BaseConnection.isNetWorkAvailable(getActivity())) {
-            //如果网络可用，开启获取笑话的网络请求
-            GetJokes getJokes = new GetJokes(mJokesCallback, 30);
-            getJokes.startRequest();
+            //如果网络可用，开启获取笑话的网络请求,下拉刷新加载第一页时，为startId赋一个很大的值，确保获得的为最新的数据
+            mNewJokes = new GetJokes(mJokesCallback, mPerPageItemCount, 1000000);
+            mNewJokes.startRequest();
         } else {
             //无网络的话，停止刷新，并进行提示
+            getCachedJokes();
             mRefreshLayout.setRefreshing(false);
-            ToastUtils.showToast(getActivity(), R.string.internet_is_unavailable, Toast.LENGTH_SHORT);
+        }
+    }
+
+    @Override
+    public void onLoadMore() {
+        //获得最后一个item的id.
+        int lastId = mAdapter.getItem(mJokes.size() - 1).getID();
+        if (BaseConnection.isNetWorkAvailable(getActivity())) {
+            //如果网络可用，开启获取笑话的网络请求,下拉刷新加载第一页时，为startId赋一个很大的值，确保获得的为最新的数据
+            mNewJokes = new GetJokes(mJokesCallback, mPerPageItemCount, lastId);
+            mNewJokes.startRequest();
+            mCurrentPage++;
+        } else {
+            ToastUtils.showToast(getActivity(), R.string.internet_unavailable_cant_load_more, Toast.LENGTH_SHORT);
+            mListView.loadComplete();
         }
     }
 
     /**
-     *  listView的item被点击时，传递到Activity中
+     * listView的item被点击时，传递到Activity中
+     *
      * @param parent
      * @param view
      * @param position
@@ -168,8 +236,10 @@ public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefr
             throw new IllegalStateException("MainActivty must implents " +
                     "com.chaoyang805.jokes.fragment.FragmentJokes.OnItemClickListener");
         } else {
-            Joke joke = mJokes.get(position);
-            ((OnItemClickListener) getActivity()).onItemClick(joke);
+            if (view.getId() != R.id.footer) {
+                Joke joke = mJokes.get(position);
+                ((OnItemClickListener) getActivity()).onItemClick(joke);
+            }
         }
     }
 

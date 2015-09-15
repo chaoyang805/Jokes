@@ -31,6 +31,10 @@ public class Constant {
      */
     public static final String LIMIT = "limit";
     /**
+     * 获取数据的起始id参数，根据id来进行分页
+     */
+    public static final String LAST_ID = "last_id";
+    /**
      * 获取最新笑话的网络请求参数值
      */
     public static final String GET_JOKES = "get_jokes";
