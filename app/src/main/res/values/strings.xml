@@ -6,6 +6,7 @@
     <string name="sample_title">搬砖是命中注定的</string>
     <string name="sample_date">发布日期：2015-09-13</string>
     <string name="post_date">发布日期：%1$s</string>
+    <string name="loading_page">加载第%1$d页</string>
     <string name="joke_content">\u3000\u3000%1$s</string>
     <string name="loading_failed">加载失败</string>
     <string name="loading_complete">加载完成</string>
@@ -13,7 +14,7 @@
     <string name="no_internet_loading_offline_data">无网络连接，加载离线数据</string>
     <string name="internet_is_unavailable">无网络连接，加载离线数据</string>
     <string name="try_pull_down_to_refresh">没有数据,下拉刷新试试</string>
-    <string name="pull_up_to_load_more">上拉加载下一页</string>
+    <string name="pull_up_to_load_more">加载下一页...</string>
     <string name="no_more_jokes">没有更多了</string>
     <string name="internet_unavailable_cant_load_more">网络不可用,无法加载更多</string>
 </resources>

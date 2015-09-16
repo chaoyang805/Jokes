@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.text.TextUtils;
 
 import com.chaoyang805.jokes.utils.Constant;
 
@@ -26,6 +27,10 @@ public class BaseConnection {
      * 网络请求的地址
      */
     private String mUrl;
+    /**
+     * 网络请求已经完成的标志位
+     */
+    private volatile boolean mIsComplete = false;
     /**
      * 异步任务对象
      */
@@ -52,16 +57,38 @@ public class BaseConnection {
 
             @Override
             protected String doInBackground(String... urlParams) {
+                URL url = null;
+                InputStream in = null;
+                InputStreamReader isr = null;
+                BufferedReader bfr = null;
                 try {
-                    URL url = new URL(urlParams[0].toString());
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    url = new URL(urlParams[0].toString());
+                    final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                     //设置超时时长为10s
-                    connection.setConnectTimeout(10000);
+                    connection.setConnectTimeout(Constant.TIME_OUT_MILLIS);
+                    //开启一个线程来计算超时的时间
+                    new Thread() {
+                        @Override
+                        public void run() {
+                            super.run();
+                            try {
+                                Thread.sleep(Constant.TIME_OUT_MILLIS);
+                                //连接超时后通过publishProgress更新进度
+                                if (!mIsComplete) {
+                                    publishProgress();
+                                    connection.disconnect();
+                                }
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+
+                        }
+                    }.start();
                     //从连接中获得输入流
-                    InputStream in = connection.getInputStream();
+                    in = connection.getInputStream();
                     //将输入流包装
-                    InputStreamReader isr = new InputStreamReader(in, "UTF-8");
-                    BufferedReader bfr = new BufferedReader(isr);
+                    isr = new InputStreamReader(in, "UTF-8");
+                    bfr = new BufferedReader(isr);
                     String line;
                     StringBuffer sb = new StringBuffer();
                     //一行一行地读取
@@ -83,13 +110,25 @@ public class BaseConnection {
             }
 
             @Override
+            protected void onProgressUpdate(Void... values) {
+                super.onProgressUpdate(values);
+                //执行到这里时，说明已经连接超时
+                if (callBack != null) {
+                    callBack.onFinished(Constant.RESULT_CODE_FAIL, null);
+                }
+            }
+
+            @Override
             protected void onPostExecute(String result) {
                 super.onPostExecute(result);
+                mIsComplete = true;
                 //网络请求完成后执行回调方法
                 if (callBack != null) {
-                    callBack.onFinished(Constant.RESULT_CODE_SUCCESS, result);
-                } else {
-                    callBack.onFinished(Constant.RESULT_CODE_FAIL, result);
+                    if (!TextUtils.isEmpty(result)) {
+                        callBack.onFinished(Constant.RESULT_CODE_SUCCESS, result);
+                    } else {
+                        callBack.onFinished(Constant.RESULT_CODE_FAIL, result);
+                    }
                 }
             }
         };

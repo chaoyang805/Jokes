@@ -6,9 +6,13 @@ package com.chaoyang805.jokes.utils;
  */
 public class Constant {
     /**
-     *
+     * fragment的argument的key
      */
     public static final String FRAGMENT_ARG_KEY = "arguments";
+    /**
+     * 网络连接超时的时间
+     */
+    public static final int TIME_OUT_MILLIS = 10000;
     /**
      * 请求成功的返回代码
      */

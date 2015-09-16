@@ -38,17 +38,25 @@ public class PullUpLoadMoreListView extends ListView implements AbsListView.OnSc
      * 是否可以执行加载更多的操作
      */
     private boolean mCanLoadMore = true;
-
+    /**
+     * 是否滑动到了最后一项
+     */
+    private boolean isScrollToBottom = false;
+    /**
+     * footerview的高度
+     */
+    private int mFooterHeight = 0;
 
     /**
      * 加载更多时的监听接口
      */
-    public interface OnLoadMoreListener{
+    public interface OnLoadMoreListener {
         void onLoadMore();
     }
 
     /**
      * 设置监听的方法
+     *
      * @param listener
      */
     public void setOnLoadMoreListener(OnLoadMoreListener listener) {
@@ -62,33 +70,58 @@ public class PullUpLoadMoreListView extends ListView implements AbsListView.OnSc
 
     public PullUpLoadMoreListView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init(context);
-    }
-
-    private void init(Context context) {
-        mFooter = (TextView) LayoutInflater.from(context).inflate(R.layout.footer, null, false);
+        initFooterView();
         this.setOnScrollListener(this);
     }
 
+    /**
+     * 初始化footerview
+     */
+    private void initFooterView() {
+        mFooter = (TextView) LayoutInflater.from(getContext()).inflate(R.layout.footer, null, false);
+        mFooter.measure(0, 0);
+        mFooterHeight = mFooter.getMeasuredHeight();
+        //隐藏footerview
+        mFooter.setPadding(0, -mFooterHeight, 0, 0);
+        this.addFooterView(mFooter);
+    }
+
+
     @Override
     public void onScrollStateChanged(AbsListView view, int scrollState) {
-        //如果最后一个可见的item是listview的最后一项，则显示下拉加载更多的footer
-        if (mLastVisibleItem == mTotalItemCount && mCanLoadMore) {
-            if (!isLoading) {
-                this.addFooterView(mFooter);
-                isLoading = true;
-                if (mListener != null) {
-                    mListener.onLoadMore();
+        if (scrollState == SCROLL_STATE_FLING || scrollState == SCROLL_STATE_IDLE) {
+
+            if (isScrollToBottom && !isLoading) {
+                if (!isLoading) {
+                    isLoading = true;
+                    mFooter.setPadding(0, 0, 0, 0);
+                    setSelection(this.getCount());
+
+                    if (mListener != null) {
+                        mListener.onLoadMore();
+                    }
                 }
             }
         }
+
     }
+
+    @Override
+    public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+
+        if (getLastVisiblePosition() == totalItemCount - 1) {
+            isScrollToBottom = true;
+        } else {
+            isScrollToBottom = false;
+        }
+    }
+
 
     /**
      * 设置加载结束的方法
      */
-    public void loadComplete(){
-        this.removeFooterView(mFooter);
+    public void loadComplete() {
+        mFooter.setPadding(0,-mFooterHeight,0,0);
         isLoading = false;
     }
 
@@ -96,11 +129,17 @@ public class PullUpLoadMoreListView extends ListView implements AbsListView.OnSc
         mCanLoadMore = canLoadMore;
     }
 
-    @Override
-    public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
-        //最后一个可见的item为第一个可见的item加上可见项目的数量
-        mLastVisibleItem = firstVisibleItem + visibleItemCount;
-        mTotalItemCount = totalItemCount;
+    public boolean isCanLoadMore(){
+        return mCanLoadMore;
+    }
+
+    /**
+     * 设置footer上的文本
+     *
+     * @param text
+     */
+    public void setFooterText(String text) {
+        mFooter.setText(text);
     }
 
 }

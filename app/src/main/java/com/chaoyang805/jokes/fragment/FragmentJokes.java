@@ -58,6 +58,10 @@ public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefr
      * 每页加载的数据数量
      */
     private int mPerPageItemCount = 10;
+    /**
+     * 是否是最后一页
+     */
+    private boolean mIsLastPage = false;
 
     /**
      * list的item被点击到时的回调
@@ -87,7 +91,7 @@ public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefr
                     //将json格式的数据解析成joke对象，加载到listView中
                     List<Joke> jokes = FileTools.parseJokeResult(result);
                     //如果获得的数据数量小于10就不再开启加载更多的功能
-                    mListView.setCanLoadMore(jokes.size() >= mPerPageItemCount);
+                    mIsLastPage = jokes.size() < mPerPageItemCount;
                     if (mCurrentPage == 1) {
                         //只缓存第一页的数据到本地
                         FileTools.cacheJokes(getActivity(), result);
@@ -95,7 +99,7 @@ public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefr
                         ToastUtils.showToast(getActivity(), R.string.loading_complete, Toast.LENGTH_SHORT);
                     } else {
                         mAdapter.addAll(jokes);
-                        ToastUtils.showToast(getActivity(), String.format("加载第%d页", mCurrentPage), Toast.LENGTH_SHORT);
+                        ToastUtils.showToast(getActivity(), getString(R.string.loading_page, mCurrentPage), Toast.LENGTH_SHORT);
                     }
                 }
             } else if (resultCode == Constant.RESULT_CODE_FAIL) {
@@ -211,10 +215,16 @@ public class FragmentJokes extends Fragment implements SwipeRefreshLayout.OnRefr
         //获得最后一个item的id.
         int lastId = mAdapter.getItem(mJokes.size() - 1).getID();
         if (BaseConnection.isNetWorkAvailable(getActivity())) {
-            //如果网络可用，开启获取笑话的网络请求,下拉刷新加载第一页时，为startId赋一个很大的值，确保获得的为最新的数据
-            mNewJokes = new GetJokes(mJokesCallback, mPerPageItemCount, lastId);
-            mNewJokes.startRequest();
-            mCurrentPage++;
+            //如果是最后一页的话，提示用户没有更多的数据了
+            if (mIsLastPage) {
+                ToastUtils.showToast(getActivity(), R.string.no_more_jokes, Toast.LENGTH_SHORT);
+                mListView.loadComplete();
+            } else {
+                //如果网络可用，开启获取笑话的网络请求,下拉刷新加载第一页时，为startId赋一个很大的值，确保获得的为最新的数据
+                mNewJokes = new GetJokes(mJokesCallback, mPerPageItemCount, lastId);
+                mNewJokes.startRequest();
+                mCurrentPage++;
+            }
         } else {
             ToastUtils.showToast(getActivity(), R.string.internet_unavailable_cant_load_more, Toast.LENGTH_SHORT);
             mListView.loadComplete();

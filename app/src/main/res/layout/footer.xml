@@ -5,5 +5,6 @@
     android:layout_height="wrap_content"
     android:text="@string/pull_up_to_load_more"
     android:gravity="center"
-    android:padding="18dp"
+    android:padding="16dp"
+    android:textSize="18sp"
     />
